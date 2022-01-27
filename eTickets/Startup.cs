@@ -1,6 +1,14 @@
+using eTickets.Data;
+using eTickets.Data.Cart;
+using eTickets.Data.Repository.Implementations;
+using eTickets.Data.Repository.Interfaces;
+using eTickets.Services.Implementations;
+using eTickets.Services.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -24,6 +32,28 @@ namespace eTickets
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
+
+            // DBContext Configuration
+            services.AddDbContext<DataContext>(op => op.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
+            // Repositories
+            services.AddTransient<IActorsRepository, ActorsRepository>();
+            services.AddTransient<IProducersRepository, ProducersRepository>();
+            services.AddTransient<ICinemasRepository, CinemasRepository>();
+            services.AddTransient<IMoviesRepository, MoviesRepository>();
+            services.AddTransient<IOrdersRepository, OrdersRepository>();
+
+            // Services
+            services.AddTransient<IActorsService, ActorsService>();
+            services.AddTransient<IProducersService, ProducersService>();
+            services.AddTransient<ICinemasService, CinemasService>();
+            services.AddTransient<IMoviesService, MoviesService>();
+            services.AddTransient<IOrdersService, OrdersService>();
+
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddScoped(sc => ShoppingCart.GetShoppingCart(sc));
+
+            services.AddSession();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -44,6 +74,8 @@ namespace eTickets
 
             app.UseRouting();
 
+            app.UseSession();
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -52,6 +84,9 @@ namespace eTickets
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
             });
+
+            // Db Initializer
+            DbInitializer.Seed(app);
         }
     }
 }
